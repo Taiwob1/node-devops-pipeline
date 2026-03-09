@@ -1,0 +1,98 @@
+name: Production DevOps Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd app
+          npm install
+
+      - name: Run tests
+        run: |
+          cd app
+          npm test
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::959895760400:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Get DockerHub credentials from Secrets Manager
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+          --secret-id dockerhub/credentials \
+          --query SecretString \
+          --output text)
+          echo "DOCKER_USER=$(echo $SECRET | jq -r .username)" >> $GITHUB_ENV
+          echo "DOCKER_PASS=$(echo $SECRET | jq -r .password)" >> $GITHUB_ENV
+
+      - name: Docker Login
+        run: |
+          echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          docker build -t $DOCKER_USER/node-devops-app .
+
+      - name: Push Docker Image
+        run: |
+          docker push $DOCKER_USER/node-devops-app
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::959895760400:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform plan
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve
