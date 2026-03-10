@@ -36,7 +36,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::959895760400:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::959895760400:role/devops-pipeline
           aws-region: us-east-1
 
       - name: Get DockerHub credentials from Secrets Manager
@@ -76,7 +76,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::959895760400:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::959895760400:role/devops-pipeline
           aws-region: us-east-1
 
       - name: Setup Terraform
