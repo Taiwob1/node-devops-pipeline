@@ -27,6 +27,12 @@ resource "aws_ecs_task_definition" "node_app" {
         containerPort = 3000
         hostPort      = 3000
       }]
+      environment = [
+        {
+          name  = "REDIS_HOST"
+          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -83,5 +89,8 @@ resource "aws_ecs_service" "node_service" {
     container_port   = 3000
   }
 
-  depends_on = [aws_lb_listener.node_listener]
+  depends_on = [
+    aws_lb_listener.node_listener,
+    aws_elasticache_cluster.redis
+  ]
 }
