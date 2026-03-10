@@ -16,40 +16,43 @@ resource "aws_security_group" "app_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
-  # Egress: allow traffic only to ECS tasks and HTTPS
-  egress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = [aws_security_group.ecs_sg.id]
-  }
+
   egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # outbound HTTPS for updates/APIs
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# ECS Task Security Group (private)
 resource "aws_security_group" "ecs_sg" {
   name        = "ecs-sg"
   description = "ECS tasks: allow traffic only from ALB"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.app_sg.id] # only ALB can reach tasks
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] # outbound to internet for APIs or updates
+    cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
+# Separate rules to break the cycle
+resource "aws_security_group_rule" "app_sg_to_ecs" {
+  type                     = "egress"
+  from_port                = 3000
+  to_port                  = 3000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app_sg.id
+  source_security_group_id = aws_security_group.ecs_sg.id
+}
+
+resource "aws_security_group_rule" "ecs_sg_from_app" {
+  type                     = "ingress"
+  from_port                = 3000
+  to_port                  = 3000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.ecs_sg.id
+  source_security_group_id = aws_security_group.app_sg.id
 }
