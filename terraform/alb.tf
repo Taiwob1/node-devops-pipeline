@@ -1,8 +1,58 @@
-# ACM Certificate
-resource "aws_acm_certificate" "app_cert" {
-  domain_name       = "yourdomain.com"
-  validation_method = "DNS"
+
+
+
+
+
+# Route 53 Hosted Zone (DNS management)
+resource "aws_route53_zone" "main" {
+  name = "mydevopsapp.live"
 }
+
+# Route 53 Record pointing to ALB
+resource "aws_route53_record" "app_record" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "mydevopsapp.live"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.app_lb.dns_name
+    zone_id                = aws_lb.app_lb.zone_id
+    evaluate_target_health = true
+  }
+}
+
+##############################
+# 4️⃣ ACM Certificate (DNS Validation)
+##############################
+
+resource "aws_acm_certificate" "my_cert" {
+  domain_name       = "mydevopsapp.live"
+  validation_method = "DNS"
+  subject_alternative_names = [
+    "*.mydevopsapp.live"
+  ]
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.my_cert.domain_validation_options : dvo.domain_name => dvo
+  }
+
+  zone_id = aws_route53_zone.main.zone_id
+  name    = each.value.resource_record_name
+  type    = each.value.resource_record_type
+  ttl     = 60
+  records = [each.value.resource_record_value]
+}
+
+resource "aws_acm_certificate_validation" "my_cert_validation" {
+  certificate_arn         = aws_acm_certificate.my_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
 
 # ALB
 resource "aws_lb" "app_lb" {
@@ -50,27 +100,10 @@ resource "aws_lb_listener" "https_listener" {
   protocol          = "HTTPS"
 
   ssl_policy      = "ELBSecurityPolicy-2016-08"
-  certificate_arn = aws_acm_certificate.app_cert.arn
+  certificate_arn = aws_acm_certificate.my_cert.arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.node_tg.arn
-  }
-}
-# Route 53 Hosted Zone (DNS management)
-resource "aws_route53_zone" "main" {
-  name = "mydevopsapp.com"
-}
-
-# Route 53 Record pointing to ALB
-resource "aws_route53_record" "app_record" {
-  zone_id = aws_route53_zone.main.zone_id
-  name    = "api.mydevopsapp.com"
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.app_lb.dns_name
-    zone_id                = aws_lb.app_lb.zone_id
-    evaluate_target_health = true
   }
 }
