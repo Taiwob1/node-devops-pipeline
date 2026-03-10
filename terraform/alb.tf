@@ -1,8 +1,3 @@
-
-
-
-
-
 # Route 53 Hosted Zone (DNS management)
 resource "aws_route53_zone" "main" {
   name = "mydevopsapp.live"
@@ -21,10 +16,7 @@ resource "aws_route53_record" "app_record" {
   }
 }
 
-##############################
-# 4️⃣ ACM Certificate (DNS Validation)
-##############################
-
+# ACM Certificate (DNS Validation)
 resource "aws_acm_certificate" "my_cert" {
   domain_name       = "mydevopsapp.live"
   validation_method = "DNS"
@@ -41,11 +33,12 @@ resource "aws_route53_record" "cert_validation" {
     for dvo in aws_acm_certificate.my_cert.domain_validation_options : dvo.domain_name => dvo
   }
 
-  zone_id = aws_route53_zone.main.zone_id
-  name    = each.value.resource_record_name
-  type    = each.value.resource_record_type
-  ttl     = 60
-  records = [each.value.resource_record_value]
+  zone_id         = aws_route53_zone.main.zone_id
+  name            = each.value.resource_record_name
+  type            = each.value.resource_record_type
+  ttl             = 60
+  records         = [each.value.resource_record_value]
+  allow_overwrite = true
 }
 
 resource "aws_acm_certificate_validation" "my_cert_validation" {
@@ -53,14 +46,13 @@ resource "aws_acm_certificate_validation" "my_cert_validation" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
-
 # ALB
 resource "aws_lb" "app_lb" {
   name               = "node-devops-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.app_sg.id]
-  subnets            = [aws_subnet.public.id]
+  subnets            = [aws_subnet.public.id, aws_subnet.public2.id]
 }
 
 # Target Group

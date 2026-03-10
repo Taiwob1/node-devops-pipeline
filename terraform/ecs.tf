@@ -36,8 +36,8 @@ resource "aws_ecs_service" "node_service" {
   deployment_maximum_percent         = 200
 
   network_configuration {
-    subnets         = [aws_subnet.public.id]
-    security_groups = [aws_security_group.ecs_sg.id]
+    subnets          = [aws_subnet.public.id, aws_subnet.public2.id]
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
