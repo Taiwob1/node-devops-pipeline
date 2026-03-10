@@ -54,7 +54,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t $DOCKER_USER/node-devops-app .
+          docker build -t $DOCKER_USER/node-devops-app -f docker/Dockerfile .
 
       - name: Push Docker Image
         run: |
@@ -76,7 +76,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::959895760400:role/devops-pipeline
+          role-to-assume: arn:aws:iam::959895760400:role/githubactionsrole
           aws-region: us-east-1
 
       - name: Setup Terraform
@@ -90,9 +90,9 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          terraform plan
+          terraform plan -input=false
 
       - name: Terraform Apply
         run: |
           cd terraform
-          terraform apply -auto-approve
+          terraform apply -auto-approve -input=false
