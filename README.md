@@ -100,8 +100,8 @@ Key Security Decisions
 No static AWS credentials — The GitHub Actions pipeline authenticates to AWS using OIDC (OpenID Connect). GitHub generates a short-lived token for each workflow run, which is exchanged for temporary AWS credentials via sts:AssumeRoleWithWebIdentity. No access keys are stored anywhere.
 Secrets via AWS Secrets Manager — DockerHub credentials are stored in AWS Secrets Manager and fetched at runtime by the pipeline. They are never hardcoded in the workflow file or repository.
 Non-root container — The Dockerfile creates a dedicated appuser in a dedicated appgroup and switches to that user before starting the application. The container never runs as root.
-Least-privilege security groups — The ALB security group only accepts inbound traffic on ports 80 and 443. The ECS security group only accepts inbound traffic on port 3000 from the ALB security group. The Redis security group only accepts traffic on port 6379 from the ECS security group. Each layer can only talk to the layer directly below it.
-Multi-stage Docker build — The Dockerfile uses a two-stage build. The first stage installs dependencies and compiles the app. The second stage copies only the built output into a clean runtime image, keeping the final image small and free of build tools.
+Least-privilege security groups  The ALB security group only accepts inbound traffic on ports 80 and 443. The ECS security group only accepts inbound traffic on port 3000 from the ALB security group. The Redis security group only accepts traffic on port 6379 from the ECS security group. Each layer can only talk to the layer directly below it.
+Multi-stage Docker build The Dockerfile uses a two-stage build. The first stage installs dependencies and compiles the app. The second stage copies only the built output into a clean runtime image, keeping the final image small and free of build tools.
 
 CI/CD Pipeline Details
 The pipeline is split into two jobs: build and deploy.
